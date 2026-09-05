@@ -1,4 +1,23 @@
-# End Of Support Notice
+# miqote69 fork: DD2 Title Update 3.2
+
+**0.66.1 — September 6, 2026. Experimental until verified in game.**
+
+[Download this fork](https://github.com/miqote69/RE-Mesh-Editor/archive/refs/heads/main.zip)
+
+Adds DD2 September 2026 `.mesh.260421070` import/export, its buffer-count and
+secondary-weight layout, and current MDF 51 / TEX 251211553 selection.
+The previous DD2 mesh format remains available in the export menu.
+Use **Dragon's Dogma 2 (September 2026)** when exporting for the updated game.
+For the Asset Browser, also use the patched
+[RE Asset Library](https://github.com/miqote69/RE-Asset-Library) and its DD2 format update button.
+
+Verified with Blender 5.2.0 and current local game assets. This is a tooling
+patch; it does not automatically convert installed Mods or establish in-game
+rendering/deformation compatibility. See [validation and limitations](DD2-PATCH-VALIDATION.md).
+
+The original author's notice and documentation follow below.
+
+# Upstream End Of Support Notice
 
 I am ending development of my RE Engine addons. No further updates or support will be provided.
 

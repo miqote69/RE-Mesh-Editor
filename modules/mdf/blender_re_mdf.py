@@ -1,4 +1,5 @@
 import os
+import glob
 import bpy
 
 from ..blender_utils import showMessageBox,showErrorMessageBox
@@ -6,7 +7,7 @@ from ..gen_functions import textColors,raiseWarning,splitNativesPath,getAdjacent
 from .file_re_mdf import readMDF,writeMDF,MDFFile,Material,TextureBinding,Property,gameNameMDFVersionDict,getMDFVersionToGameName,MMTRSData,GPBFEntry,MDFFlags,MDFFlagsB
 from .ui_re_mdf_panels import tag_redraw
 
-MDFGameNameConflictDict = set(["RE2","RE2RT","DD2"])
+MDFGameNameConflictDict = set(["RE2","RE2RT","DD2","RE9"])
 
 
 def resolveMDFGameNameConflict(gameName,mdfFile,filePath):
@@ -52,6 +53,10 @@ def resolveMDFGameNameConflict(gameName,mdfFile,filePath):
 					if "escape" in texture.texturePath.lower():
 						realGameName = "RE3RT"
 						break
+	elif gameName == "RE9":
+		# MDF 51 is shared: use adjacent DD2 assets, keeping RE9 as the default.
+		if glob.glob(os.path.join(rootPath,"*.mesh.260421070")) or glob.glob(os.path.join(rootPath,"*.tex.251211553")):
+			realGameName = "DD2"
 	elif gameName == "DD2":
 		if "dd2" in rootPath:
 			realGameName = "DD2"
@@ -61,7 +66,7 @@ def resolveMDFGameNameConflict(gameName,mdfFile,filePath):
 			if meshVersion != -1:
 				if meshVersion == 240306278:
 					realGameName = "KG"
-				elif meshVersion == 231011879:
+				elif meshVersion in (231011879, 240423143, 260421070):
 					realGameName = "DD2"
 				elif meshVersion == 240424828:
 					realGameName = "DR"
@@ -70,7 +75,7 @@ def resolveMDFGameNameConflict(gameName,mdfFile,filePath):
 			if texVersion != -1:
 				if texVersion == 231106777:
 					realGameName = "KG"
-				elif texVersion == 760230703:
+				elif texVersion in (760230703, 251211553):
 					realGameName = "DD2"
 				elif texVersion == 240606151:
 					realGameName = "DR"

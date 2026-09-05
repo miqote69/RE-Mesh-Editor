@@ -2,13 +2,13 @@
 bl_info = {
 	"name": "RE Mesh Editor",
 	"author": "NSA Cloud",
-	"version": (0, 66),
+	"version": (0, 66, 1),
 	"blender": (4, 3, 2),
 	"location": "File > Import-Export",
 	"description": "Import and export RE Engine Mesh files natively into Blender. No Noesis required.",
 	"warning": "",
-	"wiki_url": "https://github.com/NSACloud/RE-Mesh-Editor",
-	"tracker_url": "https://github.com/NSACloud/RE-Mesh-Editor/issues",
+	"wiki_url": "https://github.com/miqote69/RE-Mesh-Editor",
+	"tracker_url": "https://github.com/miqote69/RE-Mesh-Editor/issues",
 	"category": "Import-Export"}
 
 import bpy
@@ -944,7 +944,8 @@ class ExportREMesh(Operator, ExportHelper):
 			    (".2109148288", "Monster Hunter Rise", "Monster Hunter Rise"),
 				(".221108797", "Resident Evil 4", "Resident Evil 4"),
 				(".230110883", "Street Fighter 6", "Street Fighter 6"),
-				(".240423143", "Dragon's Dogma 2", "Dragon's Dogma 2"),
+				(".260421070", "Dragon's Dogma 2 (September 2026)", "Current Dragon's Dogma 2 format"),
+				(".240423143", "Dragon's Dogma 2 (pre-September 2026)", "Legacy Dragon's Dogma 2 format"),
 				(".240306278", "Kunitsu-Gami", "Kunitsu-Gami"),
 				(".240424828", "Dead Rising", "Dead Rising"),
 				(".240827123", "Onimusha 2", "Onimusha 2"),
@@ -1216,7 +1217,7 @@ class ExportREMDF(bpy.types.Operator, ExportHelper):
 				(".40", "Dragon's Dogma 2 / Kunitsu-Gami / Dead Rising", "Dragon's Dogma 2, Kunitsu-Gami, Dead Rising"),
 				(".46", "Onimusha 2", "Onimusha 2"),
 				(".45", "Monster Hunter Wilds", "Monster Hunter Wilds"),
-				(".51", "Resident Evil 9 / Pragmata", "Resident Evil 9 / Pragmata"),
+				(".51", "RE9 / Pragmata / DD2 (September 2026)", "Resident Evil 9 / Pragmata / current Dragon's Dogma 2"),
 				(".49", "Monster Hunter Stories 3", "Monster Hunter Stories 3"),
 			  ]
 		)
@@ -1860,4 +1861,3 @@ def unregister():
 		bpy.utils.unregister_class(SFUR_FH_drag_import)
 if __name__ == '__main__':
 	register()
-	

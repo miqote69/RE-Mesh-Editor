@@ -32,7 +32,7 @@ gameNameMDFVersionDict = {
 	"MHRSB":23,
 	"SF6":31,
 	"RE4":32,
-	"DD2":40,#KG
+	"DD2":51,
 	"KG":40,
 	"DR":40,
 	"MHWILDS":45,

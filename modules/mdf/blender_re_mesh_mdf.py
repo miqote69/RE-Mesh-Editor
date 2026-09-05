@@ -277,6 +277,7 @@ def findMDFPathFromMeshPath(meshPath,gameName = None):
 		".230110883":".31",#SF6
 		".231011879":".40",#DD2
 		".240423143":".40",#DD2NEW
+		".260421070":".51",#DD2 September 2026
 		".240424828":".40",#DR
 		".240820143":".45",#MHWILDS
 		".241111606":".45",#MHWILDS
@@ -388,11 +389,13 @@ texVersionDict = {
 	45:".241106027",
 	51:".250813143",
   }	
-def getTexPath(baseTexturePath,chunkPathList,mdfVersion):
+def getTexPath(baseTexturePath,chunkPathList,mdfVersion,gameName=None):
 	
 	
 	inputPath = None
 	texVersion = texVersionDict.get(mdfVersion,"")
+	if gameName == "DD2" and mdfVersion == 51:
+		texVersion = ".251211553"
 	for chunkPath in chunkPathList:
 		inputPath = wildCardFileSearch(glob.escape(os.path.join(chunkPath,"streaming",baseTexturePath+f".tex{texVersion}"))+"*")#Searches for texture even if the version is known because capcom can add platform or lang extensions
 		
@@ -476,7 +479,7 @@ def importMDF(mdfFile,meshMaterialDict,loadUnusedTextures,loadUnusedProps,useBac
 					baseTexturePath = texture.replace("@","").replace(".tex","").replace('/',os.sep)
 					outputPath = os.path.join(TEXTURE_CACHE_DIR,baseTexturePath+".png")
 					
-					texPath = getTexPath(baseTexturePath,chunkPathList,mdfVersion)
+					texPath = getTexPath(baseTexturePath,chunkPathList,mdfVersion,gameName)
 					
 					if texPath != None:
 						if texPath not in loadedImageDict:

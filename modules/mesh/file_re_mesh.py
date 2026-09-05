@@ -58,6 +58,7 @@ VERSION_MHWILDS = 130#file:241111606,internal:240704828
 VERSION_PRAGDEMO = 135#file:250925211,internal:250707828
 VERSION_MHS3 = 136#file:250604100,internal:250203152
 VERSION_RE9 = 140#file:250925211,internal:250707828#RE9 Placeholder
+VERSION_DD2_2026 = 145#file:260421070,internal:251205828
 
 SIX_WEIGHT_GAMES = frozenset([
 	VERSION_SF6,
@@ -87,6 +88,7 @@ meshFileVersionToNewVersionDict = {
 	250604100:VERSION_MHS3,
 	#250925211:VERSION_PRAGDEMO,
 	250925211:VERSION_RE9,
+	260421070:VERSION_DD2_2026,
 	}
 newVersionToMeshFileVersion = {
 	VERSION_DMC5:1808282334,
@@ -107,6 +109,7 @@ newVersionToMeshFileVersion = {
 	VERSION_MHS3:250604100,
 	#VERSION_PRAGDEMO:250925211,
 	VERSION_RE9:250925211,
+	VERSION_DD2_2026:260421070,
 	}
 meshFileVersionToInternalVersionDict = {
 	1808282334:386270720,#VERSION_DMC5
@@ -127,6 +130,7 @@ meshFileVersionToInternalVersionDict = {
 	250604100:250203152,#VERSION_MHS3
 	#250925211:250707828,#VERSION_PRAGDEMO
 	250925211:250904410,#VERSION_RE9
+	260421070:251205828,#VERSION_DD2_2026
 	}
 internalVersionToMeshFileVersionDict = {
 	386270720:1808282334,#VERSION_DMC5
@@ -147,6 +151,7 @@ internalVersionToMeshFileVersionDict = {
 	250203152:250604100,#VERSION_MHS3
 	250707828:250925211,#VERSION_PRAGDEMO
 	250904410:250925211,#VERSION_RE9
+	251205828:260421070,#VERSION_DD2_2026
 	}
 meshFileVersionToGameNameDict = {
 	1808282334:"DMC5",#VERSION_DMC5
@@ -169,6 +174,7 @@ meshFileVersionToGameNameDict = {
 	250604100:"MHS3",#VERSION_MHS3
 	#250925211:"PRAG",#VERSION_PRAGDEMO
 	250925211:"RE9",#VERSION_RE9
+	260421070:"DD2",#VERSION_DD2_2026
 	}
 
 #Used for unmapped mesh versions, potentially allows for importing
@@ -679,6 +685,9 @@ class MeshBufferHeader():
 		self.vertexBuffer = bytearray()
 		self.faceBuffer = bytearray()#NOTE: Face buffer is padded to 4 byte alignment per sub mesh
 		self.secondaryWeightBuffer = None#DD2 shape keys
+		self.blendShapeOffsets = [0, 0, 0]#DD2 2026 relative offsets
+		self.secondaryWeightBufferSize = 0
+		self.bufferIndex = 0
 		#SF6
 		self.totalBufferSize = 0
 		self.sf6unkn0 = 0
@@ -714,10 +723,15 @@ class MeshBufferHeader():
 			self.block2FaceBufferOffset = read_uint(file)
 			self.faceBufferSize = self.block2FaceBufferOffset - self.vertexBufferSize
 			self.NULL = read_uint(file)
-			self.vertexElementSize = read_short(file)
-			self.unkn1 = read_short(file)
-			self.sunbreakSecondUnknown = read_uint64(file)
-			self.sf6unkn0 = read_uint64(file)
+			if version == VERSION_DD2_2026:
+				self.blendShapeOffsets = [read_int(file) for _ in range(3)]
+				self.secondaryWeightBufferSize = read_uint(file)
+				self.bufferIndex = read_uint(file)
+			else:
+				self.vertexElementSize = read_short(file)
+				self.unkn1 = read_short(file)
+				self.sunbreakSecondUnknown = read_uint64(file)
+				self.sf6unkn0 = read_uint64(file)
 			self.streamingVertexElementOffset = read_uint64(file)
 			self.sf6unkn2 = read_uint64(file)
 			
@@ -784,7 +798,7 @@ class MeshBufferHeader():
 		
 		
 		if self.sunbreakOffset != 0:
-			if (version == VERSION_DD2 or version == VERSION_DD2NEW):	
+			if version in (VERSION_DD2, VERSION_DD2NEW, VERSION_DD2_2026):
 				#Limit this DD2 for now in case it happens to be used in other games for other things
 				file.seek(self.sunbreakOffset)
 				vertexCount = self.vertexElementList[1].posStartOffset // 12#Get amount of vertices from length of position buffer,pos data is 12 bytes
@@ -820,10 +834,16 @@ class MeshBufferHeader():
 				write_uint64(file, self.prag_unknOffset1)
 			write_uint(file, self.block2FaceBufferOffset)
 			write_uint(file, self.NULL)
-			write_short(file, self.vertexElementSize)
-			write_short(file, self.unkn1)
-			write_uint64(file, self.sunbreakSecondUnknown)
-			write_uint64(file, self.sf6unkn0)
+			if version == VERSION_DD2_2026:
+				for offset in self.blendShapeOffsets:
+					write_int(file, offset)
+				write_uint(file, self.secondaryWeightBufferSize)
+				write_uint(file, self.bufferIndex)
+			else:
+				write_short(file, self.vertexElementSize)
+				write_short(file, self.unkn1)
+				write_uint64(file, self.sunbreakSecondUnknown)
+				write_uint64(file, self.sf6unkn0)
 			write_uint64(file, self.streamingVertexElementOffset)
 			write_uint64(file, self.sf6unkn2)
 			
@@ -917,6 +937,7 @@ class FileHeader():
 		
 		#DD2
 		self.dd2HashOffset = 0
+		self.bufferCount = 0#DD2 September 2026: separate ushort at header offset 26
 		self.verticesOffset = 0
 		
 		#MHWilds
@@ -1002,10 +1023,16 @@ class FileHeader():
 			self.contentFlag.read(file)
 			self.sf6UnknCount = read_short(file)
 			
-			self.wilds_unkn2 = read_uint(file)
-			self.wilds_unkn3 = read_uint(file)
-			self.wilds_unkn4 = read_uint(file)
-			self.wilds_unkn5 = read_short(file)
+			if version == VERSION_DD2_2026:
+				self.bufferCount = read_ushort(file)
+				self.wilds_unkn3 = read_uint(file)
+				self.wilds_unkn4 = read_uint(file)
+				self.wilds_unkn5 = read_uint(file)
+			else:
+				self.wilds_unkn2 = read_uint(file)
+				self.wilds_unkn3 = read_uint(file)
+				self.wilds_unkn4 = read_uint(file)
+				self.wilds_unkn5 = read_short(file)
 				
 			self.verticesOffset = read_uint64(file)
 			self.meshGroupOffset = read_uint64(file)
@@ -1089,10 +1116,16 @@ class FileHeader():
 			write_short(file, self.nameCount)
 			self.contentFlag.write(file)
 			write_short(file, self.sf6UnknCount)
-			write_uint(file, self.wilds_unkn2)
-			write_uint(file, self.wilds_unkn3)
-			write_uint(file, self.wilds_unkn4)
-			write_short(file, self.wilds_unkn5)
+			if version == VERSION_DD2_2026:
+				write_ushort(file, self.bufferCount)
+				write_uint(file, self.wilds_unkn3)
+				write_uint(file, self.wilds_unkn4)
+				write_uint(file, self.wilds_unkn5)
+			else:
+				write_uint(file, self.wilds_unkn2)
+				write_uint(file, self.wilds_unkn3)
+				write_uint(file, self.wilds_unkn4)
+				write_short(file, self.wilds_unkn5)
 			write_uint64(file, self.verticesOffset)
 			write_uint64(file, self.meshGroupOffset)
 			write_uint64(file, self.shadowMeshGroupOffset)
@@ -1998,6 +2031,8 @@ def ParsedREMeshToREMesh(parsedMesh,meshVersion):
 	reMesh = REMesh()
 	
 	reMesh.fileHeader.version = meshFileVersionToInternalVersionDict.get(meshVersion,getNearestRemapVersion(meshVersion))
+	if version == VERSION_DD2_2026:
+		reMesh.fileHeader.bufferCount = 1#Exporter combines the imported LODs into one buffer.
 	#TODO Fix shadow mesh export, causes game to crash. It seems shadow meshes can't have unique lods, even if the sub mesh offsets are still shared. They might only be able to use the existing full lods from the main mesh
 	#parsedMesh.shadowMeshLODList.clear()
 	
@@ -2404,6 +2439,9 @@ def ParsedREMeshToREMesh(parsedMesh,meshVersion):
 			reMesh.meshBufferHeader.sunbreakSecondUnknown = len(reMesh.meshBufferHeader.secondaryWeightBuffer)
 			currentOffset = reMesh.meshBufferHeader.sunbreakOffset + len(reMesh.meshBufferHeader.secondaryWeightBuffer)
 	reMesh.fileHeader.fileSize = currentOffset
+	if version == VERSION_DD2_2026:
+		reMesh.meshBufferHeader.blendShapeOffsets = [-reMesh.meshBufferHeader.vertexBufferOffset] * 3
+		reMesh.meshBufferHeader.secondaryWeightBufferSize = len(secondaryWeightBuffer.getvalue())
 	
 	
 	
