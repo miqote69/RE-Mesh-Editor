@@ -14,6 +14,7 @@ from .blender_re_mesh import solveRepeatedUVs
 from .re_mesh_propertyGroups import ExporterNodePropertyGroup,MESH_UL_REExporterList
 from ..gen_functions import splitNativesPath
 from ..blender_utils import showErrorMessageBox
+from ..mdf.re_mdf_export_name import collection_export_path
 class WM_OT_DeleteLoose(Operator):
 	bl_label = "Delete Loose Geometry"
 	bl_idname = "re_mesh.delete_loose"
@@ -311,6 +312,11 @@ def populateCollectionList(itemList,collection,recursionLevel,parentName):
 							item.path = determineExportPath(split[0],item.exportType,assetPath.replace("/",os.sep),bpy.context.scene)
 				except Exception as err:
 					print(f"Batch Export: Cannot auto determine path for {item.name}: {str(err)}")
+		if item.exportType == "MDF":
+			try:
+				item.path = collection_export_path(item.path, collection, bpy.context)
+			except ValueError as err:
+				print(f"Batch Export: {err}")
 class WM_OT_REBatchExporter(Operator):
 	bl_label = "RE Batch Exporter"
 	bl_idname = "re_mesh.batch_exporter"

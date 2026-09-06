@@ -1,4 +1,5 @@
 import bpy
+from .re_mdf_export_name import draw_dd2_export_name
 
 from bpy.types import (Panel,
 					   Menu,
@@ -37,6 +38,7 @@ class OBJECT_PT_MDFObjectModePanel(Panel):
 		layout.prop_search(re_mdf_toolpanel, "mdfCollection",bpy.data,"collections",icon = "COLLECTION_COLOR_05")
 		layout.label(text = "Active Game")
 		layout.prop(re_mdf_toolpanel, "activeGame")
+		draw_dd2_export_name(layout, context, re_mdf_toolpanel.mdfCollection)
 		layout.operator("re_mdf.reindex_materials")
 		layout.operator("re_mdf.nullify_texture_bindings")
 		
@@ -327,4 +329,4 @@ class OBJECT_PT_MDFMaterialGPBFDataListPanel(Panel):
 			active_propname = "gpbfData_index",
 			rows = 3,
 			type='DEFAULT'
-			)	
+			)

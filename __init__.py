@@ -2,7 +2,7 @@
 bl_info = {
 	"name": "RE Mesh Editor",
 	"author": "NSA Cloud",
-	"version": (0, 66, 1),
+	"version": (0, 66, 2),
 	"blender": (4, 3, 2),
 	"location": "File > Import-Export",
 	"description": "Import and export RE Engine Mesh files natively into Blender. No Noesis required.",
@@ -49,6 +49,8 @@ from .modules.mesh.ui_re_mesh_panels import (
 #mdf
 from.modules.mdf.file_re_mdf import gameNameMDFVersionDict
 from .modules.mdf.blender_re_mdf import importMDFFile,exportMDFFile
+from .modules.mdf.re_mdf_export_name import (collection_export_path, draw_dd2_export_name, update_game_mdf_name,
+    WM_OT_CheckDD2MDFName, WM_OT_ChooseDD2MDFName)
 from .modules.mdf.ui_re_mdf_panels import (
 	OBJECT_PT_MDFObjectModePanel,
 	OBJECT_PT_MDFMaterialPresetPanel,
@@ -1197,7 +1199,8 @@ def update_targetMDFCollection(self,context):
 	if browserSpace != None:
 		#print(browserSpace.params.filename)
 		if ".mdf2" in self.targetCollection:
-			browserSpace.params.filename = self.targetCollection.split(".mdf2")[0]+".mdf2" + self.filename_ext	
+			filename = self.targetCollection.split(".mdf2")[0]+".mdf2" + self.filename_ext
+			browserSpace.params.filename = collection_export_path(filename, bpy.data.collections.get(self.targetCollection), context)
 class ExportREMDF(bpy.types.Operator, ExportHelper):
 	'''Export RE Engine MDF File'''
 	bl_idname = "re_mdf.exportfile"
@@ -1229,13 +1232,25 @@ class ExportREMDF(bpy.types.Operator, ExportHelper):
 	filter_glob: StringProperty(default="*.mdf2*", options={'HIDDEN'})
 	def invoke(self, context, event):
 		if bpy.data.collections.get(self.targetCollection,None) == None:
+			self.filename_ext = "."+str(gameNameMDFVersionDict[bpy.context.scene.re_mdf_toolpanel.activeGame])
 			if bpy.context.scene.re_mdf_toolpanel.mdfCollection:
 				self.targetCollection = bpy.context.scene.re_mdf_toolpanel.mdfCollection.name
 				if self.targetCollection.endswith(".mdf2"):
 					self.filepath = self.targetCollection + self.filename_ext
-			self.filename_ext = "."+str(gameNameMDFVersionDict[bpy.context.scene.re_mdf_toolpanel.activeGame])
+		self.filepath = collection_export_path(self.filepath, bpy.data.collections.get(self.targetCollection), context)
 		context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
+
+	def check(self, context):
+		changed = ExportHelper.check(self, context)
+		try:
+			resolved = collection_export_path(self.filepath, bpy.data.collections.get(self.targetCollection), context)
+		except ValueError:
+			return changed
+		if resolved != self.filepath:
+			self.filepath = resolved
+			return True
+		return changed
 	
 	def draw(self, context):
 		layout = self.layout
@@ -1243,6 +1258,7 @@ class ExportREMDF(bpy.types.Operator, ExportHelper):
 		layout.prop(self,"filename_ext")
 		layout.label(text = "MDF Collection:")
 		layout.prop_search(self, "targetCollection",bpy.data,"collections",icon = "COLLECTION_COLOR_05")
+		draw_dd2_export_name(layout, context, bpy.data.collections.get(self.targetCollection), int(self.filename_ext[1:]))
 		if self.targetCollection in bpy.data.collections:
 			collection = bpy.data.collections[self.targetCollection]
 			if not collection.get("~TYPE") == "RE_MDF_COLLECTION" and not collection.name.endswith(".mdf2"):
@@ -1263,6 +1279,14 @@ class ExportREMDF(bpy.types.Operator, ExportHelper):
 		print(f"\n{textColors.BOLD}RE Mesh Editor V{editorVersion}{textColors.ENDC}")
 		print(f"Blender Version {bpy.app.version[0]}.{bpy.app.version[1]}.{bpy.app.version[2]}")
 		print("https://github.com/NSACloud/RE-Mesh-Editor")
+		try:
+			resolved = collection_export_path(self.filepath, bpy.data.collections.get(self.targetCollection), context)
+		except ValueError as error:
+			self.report({'ERROR'}, str(error))
+			return {'CANCELLED'}
+		if resolved != self.filepath:
+			self.report({'INFO'}, f'Using selected game MDF name: {os.path.basename(resolved)}')
+			self.filepath = resolved
 		success = exportMDFFile(self.filepath,self.targetCollection)
 		if success:
 			self.report({"INFO"},"Exported RE MDF successfully.")
@@ -1584,6 +1608,8 @@ classes = [
 	#mdf
 	ImportREMDF,
 	ExportREMDF,
+	WM_OT_CheckDD2MDFName,
+	WM_OT_ChooseDD2MDFName,
 	#property groups
 	MDFMMTRSIndexPropertyGroup,
 	MDFGPBFDataPropertyGroup,
@@ -1810,6 +1836,8 @@ def register():
 	bpy.types.Scene.re_mdf_toolpanel = PointerProperty(type=MDFToolPanelPropertyGroup)
 	bpy.types.Scene.re_modworkspace_toolpanel = PointerProperty(type=ModWorkspaceToolPanelPropertyGroup)
 	bpy.types.Object.re_mdf_material = PointerProperty(type=MDFMaterialPropertyGroup)
+	bpy.types.Collection.re_mdf_export_name = StringProperty(
+		name='Game MDF name', description='DD2 output filename ending in .mdf2, without a folder or version. Clear to use the entered filename.', default='', update=update_game_mdf_name)
 	
 	bpy.types.Object.re_sfur_data = PointerProperty(type=SFurEntryPropertyGroup)
 	
@@ -1833,6 +1861,7 @@ def register():
 		
 	
 def unregister():
+	del bpy.types.Collection.re_mdf_export_name
 	del bpy.types.WindowManager.enableModFileTracking
 	addon_updater_ops.unregister()
 	for classEntry in classes:
